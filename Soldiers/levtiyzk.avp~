@@ -1,0 +1,381 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.AI;
+using TMPro;
+
+namespace IfThenElse
+{
+    [RequireComponent(typeof(NavMeshAgent))]
+    [RequireComponent(typeof(Animator))]
+    public class Soldier : MonoBehaviour
+    {
+        #region Setup
+        [Header("General Info")]
+        public string SoldierName;
+        public enum Nationality { Indian = 0, British = 1 }
+        public Nationality nationality;
+        public int Act;
+        public enum FightMode { Attacking = 0, Defensive = 1 }
+        public FightMode fightMode;
+
+        public Transform target;
+        public Transform player;
+        public string weaponName;
+        public string weaponType;
+        public float range;
+        public int maxAmmoPerMag;
+        public int damage;
+        public NavMeshAgent nav;
+        public NavMeshStopCheck stopCheck;
+        public Animator anim;
+        int currentBullets;
+
+        public Transform britainSoldierParent;
+        public Transform indianSoldierParent;
+
+        public AudioSource fireSource;
+        public AudioSource mouth;
+        public AudioClip fireSound;
+        public float fireRate;
+        [Range(0, 100)]
+        public int Health;
+
+        public ParticleSystem[] muzzleFlash;
+        static Color enemyIndicatingColor = new Color(233, 0, 0, 255);
+        static Color friendlyIndicatingColor = new Color(0, 164, 185, 255);
+        int SceneDifficulty;
+        public AudioSource bloodSFX;
+        public List<AudioClip> hurtSounds = new List<AudioClip>();
+        public LayerMask shootMask;
+        public bool isTargetInRange = false;
+        bool isReloading = false;
+        bool isAttacking = false;
+        bool isTargetDead = false;
+        public bool isDead;
+        public delegate void OnTargetDead();
+        public OnTargetDead onTargetDead;
+        public delegate void OnDead();
+        public OnDead onDead;
+        public GameObject enemyBag;
+        public Animator crosshair;
+        public Image crosshairCenter;
+        public bool isIndicating = false;
+        public Transform coverPoint;
+        public Transform controller;
+
+        [Header("Nametag")]
+        public GameObject nameTag;
+        public TMP_Text nameText;
+
+        private void Start()
+        {
+            if(nationality == Nationality.Indian)
+            {
+                nameText.text = SoldierName;
+            }
+        }
+        #endregion
+
+        #region Attacking Mode
+        public void InitTarget(Transform desiredTarget)
+        {
+            target = desiredTarget;
+            if (target.tag == "Player")
+            {
+                target.GetComponent<Player>().onPlayerDied += OnTargetDied;
+            }
+            StartCoroutine(ChaseTarget());
+        }
+        IEnumerator ChaseTarget() 
+        {
+            nav.isStopped = false;
+            anim.SetBool("IsCrouching", false);
+            anim.SetBool("IsAiming", false);
+            anim.SetBool("IsRunning", true);
+            Ray ray = new Ray(transform.position, target.position - transform.position);
+            while (!isTargetInRange)
+            {
+                if(target != null)
+                {
+                    if (Physics.Raycast(transform.position, target.position - transform.position, out RaycastHit hit, range, shootMask, QueryTriggerInteraction.Ignore))
+                    {
+                        if (hit.transform == target)
+                        {
+                            isTargetInRange = true;
+                            yield return null;
+                        }
+                        else
+                        {
+                            isTargetInRange = false;
+                            nav.SetDestination(target.position);
+                            yield return null;
+                        }
+                    }
+                    else
+                    {
+                        isTargetInRange = false;
+                        nav.SetDestination(target.position);
+                        yield return null;
+                    }
+                }
+
+                else
+                {
+                    StopCoroutine(ChaseTarget());
+                    yield return null;
+                    Retarget();
+                }
+              
+            }
+            nav.isStopped = true;
+            anim.SetBool("IsAiming", true);
+            anim.SetBool("IsRunning", false);
+            InvokeRepeating("Attack", 1f, fireRate);
+            StopCoroutine(ChaseTarget());
+        }
+
+
+        #endregion
+
+        #region Commons
+        Soldier engagedSoldier;
+        Player playerScript;
+        public void OnTargetDied()
+        {
+            if(!isDead)
+            {
+                target = null;
+                Retarget();
+            }
+           
+        }
+       
+        void Retarget()
+        {
+            CancelInvoke("Attack");
+            isAttacking = false;
+            isReloading = false;
+            anim.SetBool("IsShooting", false);
+            if (nationality == Nationality.British)
+            {
+                int choice = Random.Range(0, 2);
+                if(choice == 1)
+                {
+                    target = indianSoldierParent.GetChild(Random.Range(0, indianSoldierParent.childCount));
+                    target.GetComponent<Soldier>().onDead += OnTargetDied;
+                }
+                else
+                {
+                    target = player;
+                    player.GetComponent<Player>().onPlayerDied += OnTargetDied;
+                }
+            }
+            else
+            {
+                target = indianSoldierParent.GetChild(Random.Range(0, britainSoldierParent.childCount));
+                target.GetComponent<Soldier>().onDead += OnTargetDied;
+            }
+            currentBullets = maxAmmoPerMag;
+            //check if the new target is already in range
+            if (Physics.Raycast(transform.position, target.position - transform.position, out RaycastHit hit, range, shootMask, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.transform == target.transform)
+                {
+                    InvokeRepeating("Attack", 1f, fireRate);
+                }
+                else
+                {
+                    StartCoroutine(ChaseTarget());
+                }
+            }
+            else
+            {
+                StartCoroutine(ChaseTarget());
+            }
+
+        }
+        void Attack()
+        {
+            if (currentBullets != 0 && target != null)
+            {
+                transform.rotation = Quaternion.LookRotation(target.position - transform.position).normalized;
+                isReloading = false;
+                isAttacking = true;
+                anim.SetBool("IsCrouching", false);
+                anim.SetBool("IsAiming", true);
+                anim.SetBool("IsRunning", false);
+                anim.SetTrigger("Shoot");
+
+                foreach (ParticleSystem p in muzzleFlash)
+                {
+                    p.Play();
+                }
+                fireSource.Play();
+                Ray ray = new Ray(transform.position, target.position - transform.position);
+                currentBullets -= 1;
+                if (Physics.Raycast(ray, out RaycastHit hit, range, shootMask))
+                {
+                    if(hit.transform == target)
+                    {
+                        if(target == player)
+                        {
+                            playerScript.TakeDamage(damage, transform);
+                        }
+                        else
+                        {
+                            if(engagedSoldier == null)
+                            {
+                                engagedSoldier = target.GetComponent<Soldier>();
+                            }
+                            engagedSoldier.OnBulletShot(transform, damage, false);
+                        }
+                    }
+                }
+            }
+            
+            else if(target != null && currentBullets == 0)
+            {
+                CancelInvoke("Attack");
+                isAttacking = false;
+                Reload();
+            }
+            else if(target == null)
+            {
+                CancelInvoke("Attack");
+                isAttacking = false;
+                Retarget();
+            }
+        }
+        void Reload()
+        {
+            isReloading = true;
+            isAttacking = false;
+            anim.SetBool("IsAiming", false);
+            anim.SetBool("IsCrouching", true);
+
+            currentBullets = maxAmmoPerMag;
+
+            InvokeRepeating("Attack", Random.Range(4f, 8f), fireRate);
+
+        }
+
+        #endregion
+
+        #region Health
+
+        public void OnBulletShot(Transform from, int damage, bool isHeadshot)
+        {
+            if (nationality == Nationality.Indian)
+            {
+                if (from.tag == "Player")
+                {
+                    Time.timeScale = 0.5f;
+                    Time.fixedDeltaTime = 0.01f;
+                    if(Act == 2)
+                    {
+                        controller.GetComponent<Act2Controller>().Invoke("TreatPlayerAsTraitor", 0.6f);
+                    }
+                }
+                else
+                {
+                    Health -= damage;
+                    if (Health <= 0)
+                    {
+                        Die(false, from);
+                    }
+                }
+            }
+            else
+            {
+                if (Health > 0)
+                {
+                    if (isHeadshot)
+                    {
+                        Health -= damage * 2;
+                        if (Health <= 0)
+                        {
+                            Die(true, from);
+                        }
+                    }
+                    else
+                    {
+                        Health -= damage;
+                        if (Health <= 0)
+                        {
+                            Die(false, from);
+                        }
+                    }
+                }
+            }
+        }
+        void Die(bool isHeadshot, Transform from)
+        {
+            isDead = true;
+            isAttacking = false;
+            isReloading = false;
+            mouth.clip = hurtSounds[Random.Range(0, hurtSounds.Count)];
+            mouth.Play();
+            CancelInvoke("Attack");
+            anim.SetBool("IsRunning", false);
+            anim.SetBool("IsHeadshot", isHeadshot);
+            anim.SetBool("IsDead", true);
+            nav.isStopped = true;
+            if (Act == 2)
+            {
+                controller.GetComponent<Act2Controller>().SoldierDied(nationality, from);
+            }
+
+            StopCoroutine(ChaseTarget());
+            if (target.tag == "Player")
+            {
+                target.GetComponent<Player>().onPlayerDied -= OnTargetDied;
+            }
+            else
+            {
+                if (from.tag != "Player")
+                {
+                    onDead();
+                }
+            }
+            GameObject bag = Instantiate(enemyBag, new Vector3(transform.position.x, transform.position.y - 0.6f, transform.position.z), Quaternion.identity, null);
+            WeaponBox weaponBox = bag.GetComponent<WeaponBox>();
+            weaponBox.iai = controller.GetComponent<ItemsAndIcons>();
+            weaponBox.isEnemyBag = true;
+            weaponBox.items.Add(weaponName, 1);
+            weaponBox.isUsedGun = true;
+            weaponBox.magAmmoOnGun = Random.Range(Mathf.RoundToInt(maxAmmoPerMag / 2), maxAmmoPerMag);
+            weaponBox.items.Add(weaponType + " Ammo", 80);
+            Destroy(gameObject, 5f);
+        }
+
+        #endregion
+
+        #region NameDisplay
+
+        public void ShowNameDisplay()
+        {
+            if (nationality == Nationality.Indian && !isIndicating)
+            {
+                nameTag.SetActive(true);
+                nameTag.transform.rotation = Quaternion.LookRotation((player.position - transform.position).normalized);
+                CancelInvoke("HideNameDisplay");
+                Invoke("HideNameDisplay", 3f);
+                isIndicating = true;
+            }
+
+        }
+
+        public void HideNameDisplay()
+        {
+            if (nationality == Nationality.Indian)
+            {
+                nameTag.SetActive(false);
+                isIndicating = false;
+            }
+        }
+
+        #endregion
+    }
+}

@@ -1,0 +1,38 @@
+fileFormatVersion: 2
+guid: 0a8050271cd7a2840b4ffa7c5b84a491
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - leeEnfieldIcon: {fileID: 6640485308810995931, guid: c7345aa7124ae3b4ebc0194c3d0fc52a,
+      type: 3}
+  - thompsonIcon: {fileID: 7353041849911485177, guid: 32c126050874e9642acbb94aae42f7e4,
+      type: 3}
+  - winchesterIcon: {fileID: 7332313848388282825, guid: 0630b28d8b995544fb9d12abb3fea2a7,
+      type: 3}
+  - m1GarandIcon: {fileID: 6640485308810995931, guid: bf6bbcd947a2f2e498689a75f874651d,
+      type: 3}
+  - ak74Icon: {fileID: 6640485308810995931, guid: 00fa23c6307652342b483a5984755293,
+      type: 3}
+  - m1911Icon: {fileID: 47614239438035429, guid: 3417f0c2885e2344285777cc8564a3db,
+      type: 3}
+  - browningHPIcon: {fileID: 47614239438035429, guid: a74ca382fa51b5349ad3262865256888,
+      type: 3}
+  - SLRIcon: {fileID: 6640485308810995931, guid: 9075fcfdf56cc0c40bd080a89d5f4c03,
+      type: 3}
+  - M4CarbineIcon: {fileID: 6640485308810995931, guid: 71d5283983c1a8c44a28db92d2ff237d,
+      type: 3}
+  - m79Icon: {fileID: 6640485308810995931, guid: 39ddb70ee25e06748b3d9c26e0608281,
+      type: 3}
+  - brenIcon: {fileID: 6640485308810995931, guid: 684f014d4b3238b42a0d4fd4c7a550e3,
+      type: 3}
+  - grenadeIcon: {fileID: 21300020, guid: 5163ae49a0de665458bba61cd20c99b1, type: 3}
+  - dynamiteIcon: {fileID: 21300034, guid: 5163ae49a0de665458bba61cd20c99b1, type: 3}
+  - magIcon: {fileID: 21300000, guid: cb73aeadc3a1f93418c1c75d668987d3, type: 3}
+  - AxeIcon: {fileID: 21300000, guid: c6f936de5cddf3f4db6a290a9951a09b, type: 3}
+  - keyIcon: {fileID: 21300000, guid: db87cea827c18734080229e850221b71, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
