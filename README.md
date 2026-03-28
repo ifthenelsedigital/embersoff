@@ -1,4 +1,4 @@
-BEGINNING OF THE GAME: The game is started from the ITELogo Splash Scene. [The scene order is setup in the Build Settings]. 
+BEGINNING OF THE GAME: The game is started from the ITELogo Splash Scene. 
 SCRIPTING LANGUAGE: C# 
  
 SCENES STRUCTURE: The game has scenes split as: 
